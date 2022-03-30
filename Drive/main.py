@@ -9,17 +9,16 @@ from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
 ev3 = EV3Brick()
-maxSpeed = 60
-turnSpeed = 30
+LmaxSpeed = 60
+RmaxSpeed = LmaxSpeed + 3
 
-Lmotor = Motor(Port.A,Direction.COUNTERCLOCKWISE)
-Rmotor = Motor(Port.C,Direction.COUNTERCLOCKWISE)
+Lmotor = Motor(Port.A)
+Rmotor = Motor(Port.C)
 
-gyroSensor = GyroSensor(Port.S3)
-RcolorSensor = ColorSensor(Port.S1)
-LcolorSensor = ColorSensor(Port.S4)
+gyroSensor = GyroSensor(Port.S2)
+RcolorSensor = ColorSensor(Port.S4)
+LcolorSensor = ColorSensor(Port.S1)
 
-isArmUp = True
 isCorrectingLeft = False
 isCorrectingRight = False
 
@@ -32,68 +31,61 @@ def default():
     return RcolorSensor.color() == Color.WHITE and LcolorSensor.color() == Color.WHITE
 
 def slantLeft():
-    global isCorrectingLeft
-    if (gyroSensor.angle() > grace):
-        isCorrectingLeft = True
-        return True
-    elif (isCorrectingLeft and gyroSensor.angle() > 0):
-        return True
-    else:
-        isCorrectingLeft = False
-        return False
+    return RcolorSensor.color() == Color.BLACK and LcolorSensor.color() == Color.WHITE
 
 def slantRight():
-    global isCorrectingRight
-    if (gyroSensor.angle() < -grace):
-        isCorrectingRight = True
-        return True
-    elif (isCorrectingRight and gyroSensor.angle() < 0):
-        return True
-    else:
-        isCorrectingRight = False
-        return False
+    return RcolorSensor.color() == Color.WHITE and LcolorSensor.color() == Color.BLACK
 
-def slantLeft():
-    return gyroSensor.angle() < -grace
-
-def slantRight():
-    return gyroSensor.angle() > grace
+def deliver():
+    while not intersection():
+        if slantLeft():
+            Rmotor.dc(RmaxSpeed-15)
+            Lmotor.dc(LmaxSpeed)
+        elif slantRight():
+            Rmotor.dc(RmaxSpeed)
+            Lmotor.dc(LmaxSpeed-15)
+        else:
+            Rmotor.dc(RmaxSpeed+3)
+            Lmotor.dc(LmaxSpeed)
+    Rmotor.dc(0)
+    Lmotor.dc(0)
+    backward()
 
 def backward():
+    wait(250)
     for i in range(2):
         while not intersection():
-            if slantRight():
-                Rmotor.dc(-maxSpeed*0.7)
-                Lmotor.dc(-maxSpeed)
-            elif slantLeft():
-                Rmotor.dc(-maxSpeed)
-                Lmotor.dc(-maxSpeed*0.7)
+            if slantLeft():
+                Rmotor.dc(-RmaxSpeed/2+15)
+                Lmotor.dc(-LmaxSpeed/2)
+            elif slantRight():
+                Rmotor.dc(-RmaxSpeed/2)
+                Lmotor.dc(-LmaxSpeed/2+15)
             else:
-                Rmotor.dc(-maxSpeed)
-                Lmotor.dc(-maxSpeed)
+                Rmotor.dc(-RmaxSpeed)
+                Lmotor.dc(-LmaxSpeed)
 
         while intersection():
-            Rmotor.dc(-maxSpeed)
-            Lmotor.dc(-maxSpeed)
-
+            Rmotor.dc(-RmaxSpeed)
+            Lmotor.dc(-LmaxSpeed)
         Rmotor.dc(0)
         Lmotor.dc(0)
 
+    wait(250)
+    forward()
+
 def turnLeft():
     while gyroSensor.angle() > -90:
-        Rmotor.dc(50)
-        Lmotor.dc(8)
+        Rmotor.dc(20)
+        Lmotor.dc(-15)
     Rmotor.dc(0)
     Lmotor.dc(0)
     gyroSensor.reset_angle(0)
 
 def turnRight():  
-    while gyroSensor.angle() < 45:
-        Rmotor.dc(-5)
-        Lmotor.dc(50)
     while gyroSensor.angle() < 90:
-        Rmotor.dc(5)
-        Lmotor.dc(50)
+        Rmotor.dc(-15)
+        Lmotor.dc(20)
     Rmotor.dc(0)
     Lmotor.dc(0)
     gyroSensor.reset_angle(0)
@@ -102,41 +94,31 @@ def forwardX(count):
     for i in range(count):
         forward()
 
-def toggleArm():
-    global isArmUp
-    if isArmUp:
-        armMotor.run_angle(150, -200)
-    else:
-        armMotor.run_angle(150, 200)
-    isArmUp = not isArmUp
-    armMotor.stop()
-
 def simpleForward():
     while not intersection():
-        Rmotor.dc(maxSpeed)
-        Lmotor.dc(maxSpeed)
-    while intersection():
-        
-        Rmotor.dc(maxSpeed)
-        Lmotor.dc(maxSpeed)
+        Rmotor.dc(RmaxSpeed)
+        Lmotor.dc(LmaxSpeed)
+    while intersection():       
+        Rmotor.dc(RmaxSpeed)
+        Lmotor.dc(LmaxSpeed)
     Rmotor.dc(0)
     Lmotor.dc(0)
 
 def forward():
     while not intersection():
         if slantLeft():
-            Rmotor.dc(maxSpeed-15)
-            Lmotor.dc(maxSpeed)
+            Rmotor.dc(RmaxSpeed-15)
+            Lmotor.dc(LmaxSpeed)
         elif slantRight():
-            Rmotor.dc(maxSpeed)
-            Lmotor.dc(maxSpeed-15)
+            Rmotor.dc(RmaxSpeed)
+            Lmotor.dc(LmaxSpeed-15)
         else:
-            Rmotor.dc(maxSpeed)
-            Lmotor.dc(maxSpeed)
+            Rmotor.dc(RmaxSpeed+3)
+            Lmotor.dc(LmaxSpeed)
 
     while intersection():
-        Rmotor.dc(maxSpeed)
-        Lmotor.dc(maxSpeed)
+        Rmotor.dc(RmaxSpeed)
+        Lmotor.dc(LmaxSpeed)
 
     Rmotor.dc(0)
     Lmotor.dc(0)
@@ -144,9 +126,9 @@ def forward():
     
 
 ev3.speaker.beep(frequency=400, duration=200)
-wait(7000)
+#wait(7000)
 gyroSensor.reset_angle(0)
-forward()
-forward()
-forward()
-turnRight()    
+
+while True:
+    print(str(gyroSensor.angle()))
+
