@@ -55,6 +55,7 @@ def turnLeft():
         Lmotor.dc(-turnSpeed)
     Rmotor.dc(0)
     Lmotor.dc(0)
+    resetPID()
     
 def deliver():
     forward()
@@ -76,18 +77,20 @@ def turnRight():
         Rmotor.dc(-turnSpeed)
         Lmotor.dc(turnSpeed)
     Rmotor.dc(0)
-    Lmotor.dc(0)    
+    Lmotor.dc(0) 
+    resetPID()   
     
 
 def resetPID():
+    global errorSum
+    global startTime
     errorSum = 0
     startTime = time()
 
 def forward():
-    resetPID()
     k = 1
-    K_P = 0.35
-    K_I = 0
+    K_P = 0.42
+    K_I = 0.002
     while not intersection():
         u = PINoD(goal,K_P,K_I,frontLightSensor.reflection())
         Rmotor.dc(forwardSpeed+k*u)
@@ -103,11 +106,12 @@ def forward():
 
 def Turn180():
     gyroSensor.reset_angle(0)
-    while gyroSensor.angle() < 160:
+    while gyroSensor.angle() < 167:
         Rmotor.dc(-turnSpeed)
         Lmotor.dc(turnSpeed)
     Rmotor.dc(0)
-    Lmotor.dc(0)   
+    Lmotor.dc(0) 
+    resetPID()  
 
 #We were told to ignore D in PID
 def PINoD(goal,K_P,K_I,inputValue):
