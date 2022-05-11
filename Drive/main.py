@@ -10,177 +10,321 @@ from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
 ev3 = EV3Brick()
-LmaxSpeed = 60
-RmaxSpeed = LmaxSpeed + 3
-startTime = time()
-errorPrev = 0
+
 errorSum = 0
 
+turnSpeed = 50
+
+forwardSpeed = 70
+
+#Define motors
 Lmotor = Motor(Port.C)
 Rmotor = Motor(Port.A)
 
+#Define sensors
 gyroSensor = GyroSensor(Port.S1)
 backLightSensor = ColorSensor(Port.S2)
 frontLightSensor = ColorSensor(Port.S3)
 
-isCorrectingLeft = False
-isCorrectingRight = False
 
-grace = 2
+colourList = [Color.WHITE,Color.WHITE,Color.WHITE]
+count = 0
+
+
+def isBlack():
+    global colourList
+    for x in colourList:
+        if(x != Color.BLACK):
+            return False
+    return True
 
 def intersection():
-    return backLightSensor.color() == Color.BLACK
-
-def slantLeft():
-    return RcolorSensor.color() == Color.BLACK and LcolorSensor.color() == Color.WHITE
-
-def slantRight():
-    return RcolorSensor.color() == Color.WHITE and LcolorSensor.color() == Color.BLACK
-
-def deliver():
-    while not intersection():
-        if slantLeft():
-            Rmotor.dc(RmaxSpeed-15)
-            Lmotor.dc(LmaxSpeed)
-        elif slantRight():
-            Rmotor.dc(RmaxSpeed)
-            Lmotor.dc(LmaxSpeed-15)
-        else:
-            Rmotor.dc(RmaxSpeed+3)
-            Lmotor.dc(LmaxSpeed)
-    Rmotor.dc(0)
-    Lmotor.dc(0)
-    backward()
-
-def backward():
-    wait(250)
-    for i in range(2):
-        while not intersection():
-            if slantLeft():
-                Rmotor.dc(-RmaxSpeed/2+15)
-                Lmotor.dc(-LmaxSpeed/2)
-            elif slantRight():
-                Rmotor.dc(-RmaxSpeed/2)
-                Lmotor.dc(-LmaxSpeed/2+15)
-            else:
-                Rmotor.dc(-RmaxSpeed)
-                Lmotor.dc(-LmaxSpeed)
-
-        while intersection():
-            Rmotor.dc(-RmaxSpeed)
-            Lmotor.dc(-LmaxSpeed)
-        Rmotor.dc(0)
-        Lmotor.dc(0)
-
-    wait(250)
-    forward()
+    global colourList
+    global count
+    colourList[count] = backLightSensor.color()
+    print(colourList)
+    count += 1
+    if (count == len(colourList)):
+        count = 0
+    return isBlack()
 
 def turnLeft():
-    while gyroSensor.angle() > -85:
-        Rmotor.dc(35)
-        Lmotor.dc(-35)
+    gyroSensor.reset_angle(0)
+    while gyroSensor.angle() > -76:
+        Rmotor.dc(turnSpeed)
+        Lmotor.dc(-turnSpeed)
     Rmotor.dc(0)
     Lmotor.dc(0)
-    gyroSensor.reset_angle(0)
+    
+def deliver():
+    forward()
+    Rmotor.dc(forwardSpeed)
+    Lmotor.dc(forwardSpeed)
+    wait(200)
+    Rmotor.dc(0)
+    Lmotor.dc(0)
+    wait(10)
+    Rmotor.dc(-forwardSpeed)
+    Lmotor.dc(-forwardSpeed)
+    wait(200)    
+    Rmotor.dc(0)
+    Lmotor.dc(0)
 
 def turnRight():  
-    while gyroSensor.angle() < 85:
-        Rmotor.dc(-35)
-        Lmotor.dc(35)
-    Rmotor.dc(0)
-    Lmotor.dc(0)
     gyroSensor.reset_angle(0)
-
-def forwardX(count):
-    for i in range(count):
-        forward()
-
-def simpleForward():
-    while not intersection():
-        Rmotor.dc(RmaxSpeed)
-        Lmotor.dc(LmaxSpeed)
-    while intersection():       
-        Rmotor.dc(RmaxSpeed)
-        Lmotor.dc(LmaxSpeed)
+    while gyroSensor.angle() < 76:
+        Rmotor.dc(-turnSpeed)
+        Lmotor.dc(turnSpeed)
     Rmotor.dc(0)
-    Lmotor.dc(0)
+    Lmotor.dc(0)    
+    
 
 def resetPID():
-    errorPrev = 0
     errorSum = 0
     startTime = time()
 
 def forward():
     resetPID()
     k = 1
-    K_P = 0.4
-    K_I = 0.1
-    K_D = 0
-    speed = 50
+    K_P = 0.35
+    K_I = 0
     while not intersection():
-        u = PID(goal,K_P,K_I,K_D,frontLightSensor.reflection())
-        Rmotor.dc(speed+k*u)
-        Lmotor.dc(speed-k*u)
+        u = PINoD(goal,K_P,K_I,frontLightSensor.reflection())
+        Rmotor.dc(forwardSpeed+k*u)
+        Lmotor.dc(forwardSpeed-k*u)
 
     while intersection():
-        u = PID(goal,K_P,K_I,K_D,frontLightSensor.reflection())
-        Rmotor.dc(speed+k*u)
-        Lmotor.dc(speed-k*u)
+        u = PINoD(goal,K_P,K_I,frontLightSensor.reflection())
+        Rmotor.dc(forwardSpeed+k*u)
+        Lmotor.dc(forwardSpeed-k*u)
 
-    
-    Rmotor.dc(speed+k*u)
-    Lmotor.dc(speed-k*u)
+    Rmotor.dc(0)
+    Lmotor.dc(0)
 
-def PID(goal,K_P,K_I,K_D,inputValue):
+def Turn180():
+    gyroSensor.reset_angle(0)
+    while gyroSensor.angle() < 160:
+        Rmotor.dc(-turnSpeed)
+        Lmotor.dc(turnSpeed)
+    Rmotor.dc(0)
+    Lmotor.dc(0)   
+
+#We were told to ignore D in PID
+def PINoD(goal,K_P,K_I,inputValue):
     global startTime
-    global errorPrev
     global errorSum
-    u = 0
+    u = 0 
     
     stopTime = time()
     deltaTime = stopTime - startTime
     
     error = goal - inputValue
+
     #Estimator for integral
     errorSum = errorSum + error * deltaTime
     u += K_I * errorSum
-    
-    #Estimator for  derivative
-    if(deltaTime < 0.0 or deltaTime > 0.0):
-        dedt = ( error - errorPrev ) / deltaTime
-        u += K_D * dedt
         
     #Proporitnal
     u += K_P * error
     
     #Update for next iteration
-    errorPrev = error
     startTime = time()
-    
     
     return u
 
 
 ev3.speaker.beep(frequency=400, duration=200)
-wait(7000)
-ev3.speaker.beep(frequency=400, duration=200)
-goal = frontLightSensor.reflection()
+wait(1000)
+#Black has a reflection of about 3 while white is about 50 so the goal is in between
+startTime = time()
+goal = 21
+gyroSensor.reset_angle(0)
 
-forward()
-forward()
-forward()
-forward()
-turnRight()
-forward()
-turnLeft()
-forward()
-turnLeft()
-forward()
-forward()
-turnLeft()
-forward()
-turnRight()
-forward()
-forward()
-forward()
-forward()
+# Generated Code starts here. Please don't remove or modify any code at this point.
+def runSolution():
+	turnLeft()
+	forward()
+	forward()
+	forward()
+	forward()
+	turnRight()
+	deliver()
+	Turn180()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	forward()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	forward()
+	deliver()
+	Turn180()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	turnLeft()
+	deliver()
+	turnRight()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	deliver()
+	turnLeft()
+	deliver()
+	Turn180()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	deliver()
+	turnLeft()
+	forward()
+	turnRight()
+	forward()
+	turnRight()
+	deliver()
+	Turn180()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	turnRight()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	forward()
+	forward()
+	turnLeft()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	forward()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	forward()
+	deliver()
+	Turn180()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	forward()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	forward()
+	forward()
+	turnRight()
+	forward()
+	turnRight()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	forward()
+	forward()
+	forward()
+	deliver()
+	turnRight()
+	forward()
+	turnLeft()
+	forward()
+	turnLeft()
+	deliver()
+
+runSolution()
+# Generated Code ended. You may edit again.
