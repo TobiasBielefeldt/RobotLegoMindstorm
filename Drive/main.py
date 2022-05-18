@@ -61,13 +61,13 @@ def deliver():
     forward()
     Rmotor.dc(forwardSpeed)
     Lmotor.dc(forwardSpeed)
-    wait(200)
+    wait(180)
     Rmotor.dc(0)
     Lmotor.dc(0)
     wait(10)
     Rmotor.dc(-forwardSpeed)
     Lmotor.dc(-forwardSpeed)
-    wait(200)    
+    wait(180)    
     Rmotor.dc(0)
     Lmotor.dc(0)
 
@@ -143,6 +143,10 @@ wait(1000)
 startTime = time()
 goal = 21
 gyroSensor.reset_angle(0)
+
+
+
+
 
 # Generated Code starts here. Please don't remove or modify any code at this point.
 def runSolution():
